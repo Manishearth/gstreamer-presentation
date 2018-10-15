@@ -4,7 +4,7 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>reveal.js</title>
+		<title>Using GStreamer for Servo's WebAudio implementation in Rust</title>
 
 		<link rel="stylesheet" href="css/reveal.css">
 		<link rel="stylesheet" href="css/theme/sky.css">
@@ -33,16 +33,37 @@
 				background: none;
 				box-shadow: initial;
 			}
+			.audio-button {
+				font-size: 40px;
+			}
+			.reveal pre code {
+				max-height: 1000px;
+			}
 		</style>
 	</head>
 	<body>
+		<script type="text/javascript">
+			function playButton(button, func) {
+			    function play() {
+			        button.onclick = stop;
+			        button.innerHTML = "Stop";
+			        button.ctx = new AudioContext();
+			        window.playingButton = button;
+			        func(button.ctx);
+			    }
+			    function stop() {
+			        button.ctx.close();
+			        button.innerHTML = "Play";
+			        window.playingButton = null;
+			        button.onclick = play;
+			    }
+			    button.onclick = play;
+			}    
+		</script>
 		<div class="reveal">
 			<div class="slides">
-<section data-markdown data-separator-notes="^♫" data-separator="^§$" data-separator-vertical="^§§$">
-	<script type="text/template">
+<section data-markdown="talk.md" data-separator-notes="^♫" data-separator="^§$" data-separator-vertical="^§§$">
 
-
-	</script>
 </section>
 			</div>
 		</div>
@@ -55,6 +76,13 @@
 			// - https://github.com/hakimel/reveal.js#configuration
 			// - https://github.com/hakimel/reveal.js#dependencies
 			Reveal.initialize({
+
+	width: "1920",
+	height: "1080",
+	margin: 0.1,
+	minScale: 0.2,
+	maxScale: 1.5,
+				history: true,
 				dependencies: [
 					{ src: 'plugin/markdown/marked.js' },
 					{ src: 'plugin/markdown/markdown.js' },
@@ -63,5 +91,29 @@
 				]
 			});
 		</script>
+	<script type="text/javascript">
+Reveal.addEventListener( 'ready', function( event ) {
+	for (script of document.querySelectorAll("script[type='text/audiosample']")) {
+		let button = document.createElement('button');
+		button.className = "audio-button"
+		button.innerHTML = "Play";
+		let code = `let cx = new AudioContext();${script.textContent}`;
+		let details = document.createElement("details");
+		let highlighted = hljs.highlightAuto(code, ["js"]).value;
+		details.innerHTML = `<summary class=audio-code>Code</summary><pre><code class="lang-js hljs javascript">${highlighted}</code></pre>`;
+
+		script.parentNode.insertBefore(button, script);
+		script.parentNode.insertBefore(details, script);
+		playButton(button, new Function("cx", script.textContent));
+	}
+} );
+
+Reveal.addEventListener( 'slidechanged', function( event ) {
+    if (window.playingButton) {
+    	window.playingButton.click();
+    }
+} );
+
+</script>
 	</body>
 </html>
