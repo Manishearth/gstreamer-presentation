@@ -84,6 +84,7 @@ So Servo's an experimental browser engine written primarily in Rust, which uses 
  - Audio playback, decoding, processing, and synthesis from Javascript
  - Supported by Firefox, Chrome, Edge, Safari, and many other browsers.
  - Modular routing based model for processing audio
+ - Primarily for audio processing (use `audio` for playback)
 
 
 ♫ 
@@ -207,7 +208,10 @@ Another thing one can do is connect the output of a node to a parameter itself, 
 
 Overall, WebAudio has a pretty wide feature set. It supports:
 
-(click through and read)
+(read slides)
+
+
+@@ write better-structured paragraph version of this for slide notes
 
 §
 
@@ -267,6 +271,8 @@ However, web browsers components are typically very tightly intertwined with oth
 
 Fortunately, gstreamer exists! It's designed as a general-purpose multimedia framework, so it should satisfy our requirements! Furthermore, Sebastian Dröge has published an excellent set of Rust bindings for gstreamer and many of its plugins. These present a relatively Rust-y API for all of the features of gstreamer.
 
+gstreamer-rs isn't feature complete, but it's actively getting there.
+
 We tried using it as our backend and it was a very pleasant experience.
 
 §
@@ -305,13 +311,16 @@ For WebAudio, we take the aforementioned audio processing pipeline, and put it "
 ### GStreamer in servo-media: AppSrc
 
  - rendering via `gst_app_src_push_buffer()` (`AppSrc::push_buffer()`)
- - backpressure via `gst_app_src_get_current_level_bytes()` / `gst_app_src_get_max_bytes()` (`AppSrc::get_current_level_bytes()`, `AppSrc::get_max_bytes()`)
+ - avoid blocking via `gst_app_src_get_current_level_bytes()`  (`AppSrc::get_current_level_bytes()`)
 
 ♫ 
 
 The AppSrc is the core part of the audio sink, we use `push_buffer()` to provide audio to it.
 
-As a backpressure mechanism, the audio processing thread eagerly processes blocks of data until the appsrc element has the maximum number of queued bytes. This ensures that audio can play smoothly on GStreamer's thread without having to wait for processing after each block, but also ensures that we don't processs _too much_ audio and cause latency. We plan to tweak this threshhold depending on latency measurements.
+We set `max_bytes` of the AppSrc to `1`, this way we can asynchronously push up to one block to the AppSrc's queue. We only push more when the queue has space. This is functionally equivalent to using a blocking AppSrc, however we wish to push data from the same thread that does the processing (and handling of incoming messages), so the AppSrc is non-blocking and we manually check for a full queue. We also set up the AppSrc's `need_data` callback to re-request processing if it empties.
+
+The `max_bytes` could potentially be increased to trade off some latency in the audio thread picking up messages for eager processing, if this turns out to be an issue.
+
 
 §§
 
@@ -341,7 +350,7 @@ Before we used an AppSrc for audio playback, we tried a BaseSrc. It had a pull-b
 
 WebAudio supports decoding audio data. We handle this by pushing formatted audio to an `appsrc` element, which goes through a decoding pipeline, ultimately hitting an `appsink` whose callbacks we hook into to extract the decoded audio.
 
-We currently support decoding from existing buffers, but we plan to support the gradual decoding of audio being loaded over the network, as this is required to support `MediaElementAudioSourceNode`, a source node which allows WebAudio to pull audio from HTML media elements. The same callback mechanism can be used here.
+We currently support decoding from existing buffers, but we plan to support the gradual decoding of audio being loaded over the network, as this is required to support `MediaElementAudioSourceNode`, a source node which allows WebAudio to pull audio from HTML media elements. This will likely be done via a separate mechanism, relying on the existing support for audio playback.
 
 
 §§
@@ -643,6 +652,8 @@ This library is designed to be drop-in in Servo; Servo has to do a very small am
 ♫ 
 
 (read slides)
+
+@@ write better-structured paragraph version of this for slide notes
 
 §
 
