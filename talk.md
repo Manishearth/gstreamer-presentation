@@ -40,8 +40,6 @@ Hi, I'm Manish. I work on the experimental Servo browser engine.
 
 We've recently been working on WebAudio support, and we're using GStreamer for all of the decoding/playback.
 
-@@ fill this in more
-
 §
 <img src="img/servo-transparent.png" width="50%" class="blend"></img>
 
@@ -49,11 +47,12 @@ We've recently been working on WebAudio support, and we're using GStreamer for a
 
 So ... what's Servo?
 
-Most browser engines are complex beasts written in C++, and highly single-threaded.
+The core of a web browser is the "browser engine". Browser engines handle things like parsing the source for the webpage, running javascript, applying CSS, laying out the page, and rendering the result.
 
-It's _hard_ to write safe, multithreaded code for such codebases. But modern processors support a lot of parallelism, and we're missing out if we don't make use of that.
+Currently, most browser engines are complex beasts written in C++, and are highly single-threaded. This isn't great; browsers are something we use a lot, and ideally they would use the full power of the CPUs available to them.
 
-@@ its-free-real-estate meme?
+Sadly, it's _hard_ to write safe, multithreaded code for such large codebases. But modern processors support a lot of parallelism, and we're missing out if we don't make use of that. We should find a way to fix this!
+
 
 Enter Rust!
 
@@ -63,19 +62,21 @@ Enter Rust!
 
 ♫
 
-Rust is a relatively new systems programming language incubated at Mozilla (@@ mention this?). Its goals are speed, safety, and fearless concurrency. One of its main selling points is that it makes it possible to easily write safe systems code, with or without parallelism. This makes it ideal for improving the state of browser development; and this was indeed one of the reasons Mozilla incubated it in the first place!
+Rust is a relatively new systems programming language incubated at Mozilla. Its goals are speed, safety, and fearless concurrency.
+
+One of its main selling points is that it makes it possible to easily write safe systems code, with or without parallelism. This makes it ideal for improving the state of browser development; and this was indeed one of the reasons Mozilla incubated it in the first place!
 
 §§
 <img src="img/servo-transparent.png" width="50%" class="blend"></img>
 
 ♫ 
 
-So Servo's an experimental browser engine written primarily in Rust, which uses parallelism wherever it can. It's a testing ground for new ideas, and a place from where we can eventually upstream code into Firefox. We're also hoping to get it to users as part of Firefox Reality, so we need to support things common in WebVR environments -- like audio!
+So Servo's an experimental browser engine written primarily in Rust, which uses parallelism wherever it can.
 
-@@ maybe add more
-@@ explain what a browser engine is?
+It's a testing ground for new ideas, and a place from where we can eventually upstream code into Firefox. We're also hoping to get it to users as part of Firefox Reality, so we need to support things common in WebVR environments -- like audio!
 
-⏰=3m
+
+⏰=1m
 
 §
 
@@ -89,9 +90,11 @@ So Servo's an experimental browser engine written primarily in Rust, which uses 
 
 ♫ 
 
-Webaudio is an API for playing, decoding, processing, and synthesizing audio from Javascript. These days it's pretty widely supported.
+Webaudio is a Web API for playing, decoding, processing, and synthesizing audio from Javascript. These days it's pretty widely supported.
 
-It uses a modular routing model for audio processing
+It uses a modular routing model for audio processing.
+
+Typically `<audio>` elements are used for simple audio playback, and you use WebAudio for when you're looking to do some audio processing.
 
 §
 
@@ -113,6 +116,8 @@ o.start();
 ♫ 
 
 Webaudio's model lets the user create various nodes and connect them up. Blocks of audio are produced by source nodes, processed by various intermediate nodes, and eventually sent to the destination node which renders them.
+
+Here, we have a simple oscillator node (by default a sine wave at 440 Hz), connected up to a gain node with gain 0.5, which yields the processed audio to the destination node, playing it. It sounds like this.
 
 §§
 
@@ -151,7 +156,7 @@ o2.start();
 
 One can connect outputs from multiple nodes to a single input of some node, which causes the audio to be mixed with unity gain to a single block of audio with a number of channels determined by the number of channels in each output as well as various configurable settings of the node receiving the audio.
 
-In this example, we mix two signals of discordant frequencies.
+In this example, we mix two signals of discordant frequencies, one of which has had its volume reduced.
 
 §§
 
@@ -206,12 +211,21 @@ Another thing one can do is connect the output of a node to a parameter itself, 
 ♫ 
 
 
-Overall, WebAudio has a pretty wide feature set. It supports:
+Overall, WebAudio has a pretty wide feature set.
 
-(read slides)
+It supports ¶
+
+Generating periodic waves of various kinds, including custom periodic waves supplied via their fourier transform.
+
+It also supports playing buffers of raw audio.
 
 
-@@ write better-structured paragraph version of this for slide notes
+One can manipluate the gain of some audio, apply a delay to it, or even manipulate its its channels.
+
+There's support for applying various filters to a stream of audio, e.g. low-pass, high-pass, band-pass, notch, etc, including custom IIR filters.
+
+The processed output can be played realtime to hardware, but it can also be rendered to a buffer for later playback.
+
 
 §
 
@@ -226,9 +240,9 @@ Overall, WebAudio has a pretty wide feature set. It supports:
 
 Webaudio typically is supposed to render realtime audio at 44,100Hz. It's possible to render audio "offline" to a buffer at different sample rates. Audio is processed in blocks of 128 sample-frames (a sample frame is effectively one thirty two bit floating point value, nominally between -1 and 1, per channel). The latency here needs to be very low -- JavaScript should be able to manipulate the audio state without there being much of a delay in seeing the effects. This is especially important for e.g. 3D panning audio.
 
-It should also render continuously (when not rendering "offline"); there shouldn't be gaps between each block being rendered.
+It should also render continuously, when not rendering "offline"; there shouldn't be gaps between each block being rendered.
 
-⏰=3m (6m total) 
+⏰=6m
 
 
 §
@@ -275,6 +289,8 @@ gstreamer-rs isn't feature complete, but it's actively getting there.
 
 We tried using it as our backend and it was a very pleasant experience.
 
+T=9m
+
 §
 
 ### GStreamer in servo-media: Audio sink
@@ -299,8 +315,7 @@ digraph g {
 ♫ 
 
 
-For WebAudio, we take the aforementioned audio processing pipeline, and put it "inside" a gstreamer appsink. The appsink requests blocks of audio from servo-media, and servo-media runs the audio processing graph a block at a time, pushing these blocks into the appsink.
-
+For WebAudio, we take the aforementioned audio processing pipeline, and put it "inside" a gstreamer appsrc. The appsrc requests blocks of audio from servo-media, and servo-media runs the audio processing graph a block at a time, pushing these blocks into the appsink.
 
 
 
@@ -317,9 +332,9 @@ For WebAudio, we take the aforementioned audio processing pipeline, and put it "
 
 The AppSrc is the core part of the audio sink, we use `push_buffer()` to provide audio to it.
 
-We set `max_bytes` of the AppSrc to `1`, this way we can asynchronously push up to one block to the AppSrc's queue. We only push more when the queue has space. This is functionally equivalent to using a blocking AppSrc, however we wish to push data from the same thread that does the processing (and handling of incoming messages), so the AppSrc is non-blocking and we manually check for a full queue. We also set up the AppSrc's `need_data` callback to re-request processing if it empties.
+We set `max_bytes` of the AppSrc to `1`, this way we can asynchronously push up to one block to the AppSrc's queue. We only push more when the queue has space. This is functionally equivalent to using a blocking AppSrc, however we wish to push data from the same thread that does the processing and handling of incoming messages, so the AppSrc is non-blocking and we manually check for a full queue. We also set up the AppSrc's `need_data` callback to re-request processing if it empties.
 
-The `max_bytes` could potentially be increased to trade off some latency in the audio thread picking up messages for eager processing, if this turns out to be an issue.
+The `max_bytes` could potentially be increased to trade off some latency in the processing thread for eager processing, if this turns out to be an issue.
 
 
 §§
@@ -334,7 +349,7 @@ The `max_bytes` could potentially be increased to trade off some latency in the 
 
 ♫ 
 
-Before we used an AppSrc for audio playback, we tried a BaseSrc. It had a pull-based model so we didn't need to handle the scheduling ourselves, however it ultimately ended up being a lot more code. Sebastian mentioned that AppSrc is much better suited for our use case -- we just need the ability to push buffers to the gstreamer pipeline -- so we switched. The gstreamer-rs BaseSrc API, however, is quite nicely done using Rust traits.
+Before we used an AppSrc for audio playback, we tried a BaseSrc. It had a pull-based model so we didn't need to handle the scheduling ourselves, however it ultimately ended up being a lot more code. Sebastian mentioned that AppSrc is much better suited for our use case since we just need the ability to push buffers to the gstreamer pipeline; so we switched. The gstreamer-rs BaseSrc API, however, is quite nicely done using Rust traits.
 
 §§
 
@@ -357,20 +372,21 @@ We currently support decoding from existing buffers, but we plan to support the 
 
 ### GStreamer in servo-media: Video/audio playback
 
+ - for `<audio>` and `<video>`
  - Uses gstreamer-player crate
  - Has callbacks for new frames
- - Provides things in a webrender-compatible format
 
 
 ♫ 
 
-We use the gstreamer-player crate for media playback. We hook into sink callbacks on new sample-frames, convert the frames into a format webrender can accept, and provide those to the application.
+So far, I've only talked about WebAudio. But we also wish to support `<audio>` and `<video>` elements, and want to use GStreamer for their implementation as well.
 
-Webrender is the GPU rendering engine used in Servo (and soon, Firefox!).
+We use the gstreamer-player crate for media playback. We hook into sink callbacks on new sample-frames, convert them into an intermediate frame format, and pass them on to the application.
 
 
 
-⏰=6m (12m total)
+
+⏰=13
 
 
 §
@@ -414,7 +430,7 @@ pub struct Block {
 
 ♫ 
 
-The basic building block of servo-media is the "Block". This is a single render quantum of audio, that is, 128 sample-frames of multichannel audio. We have some optimizations here -- silent blocks take up no memory, and blocks with the same content in each channel don't need to repeat the content. Outside code doesn't usually need to see this optimization and can request per-channel views of the data.
+The basic building block of servo-media is the "Block". This is a single render quantum of audio, that is, 128 sample-frames of multichannel audio. We have some optimizations here -- silent blocks take up no memory, and blocks with the same content in each channel don't need to repeat the content. Outside code doesn't usually need to see this optimization and can request per-channel views of the data regardless of representation.
 
 
 §§
@@ -465,7 +481,7 @@ impl AudioNodeEngine for FooNode {
 
 ♫ 
 
-Individual nodes can have multiple inputs or outputs. So as not to complicate the API, nodes implement a `process()` method that processes data as `Chunk`s. The input `Chunk` will have the number of blocks equal to the number of inputs (this is usually 1, zero for source nodes, but can be more for some special nodes), and the output `Chunk` must have a number of blocks equal to the number of outputs (this is usually 1).
+Individual nodes can have multiple inputs or outputs. So as not to complicate the API, nodes implement a `process()` method that processes data as `Chunk`s. The input `Chunk` will have the number of blocks equal to the number of inputs  -- this is usually 1, zero for source nodes, but can be more for some special nodes. The output `Chunk` must have a number of blocks equal to the number of outputs (this is usually 1).
 
 
 
@@ -603,6 +619,8 @@ The backend is abstracted into two traits (there's a third trait for media playb
 
 The `AudioDecoder` trait lets servo-media queue up a buffer of formatted audio to be decoded. The decoding process works through a set of callbacks that gradually receive the raw audio buffer.
 
+T=19
+
 §
 
 ### Using servo-media
@@ -634,7 +652,7 @@ context.message_node(
 
 ♫ 
 
-servo-media has a Rust API that's deliberately close to the WebAudio API, but internally message-based. It's used by instantiating an audio context, which internally sets up the processing thread, as well as any backend state. Then, one can request the creation of nodes, and connect them up. There are various messages you can send nodes -- like asking them to start or modifying their parameters.
+servo-media has a Rust API that's deliberately close to the WebAudio API, but internally message-based. It's used by instantiating an audio context, which internally sets up the processing thread, as well as any backend state. Then, one can request the creation of nodes, and connect them up. There are various messages you can send nodes -- like asking them to start, or modifying their parameters.
 
 This library is designed to be drop-in in Servo; Servo has to do a very small amount of work to use features from this library since most of it is abstracted away. It's also designed to be useful for other users -- if people want to process audio using a WebAudio-like API in Rust, this crate can do it!
 
@@ -688,3 +706,5 @@ Thank you:
 
  - Short words: https://twitter.com/Manishearth
  - Long words: https://manishearth.github.io
+
+T=21

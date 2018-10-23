@@ -23,6 +23,7 @@
 		<style type="text/css">
 			.reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
 				text-transform: initial;
+				padding-bottom: 50px;
 			}
 
 			.reveal section img {
@@ -77,9 +78,11 @@
 			button.className = "audio-button"
 			button.innerHTML = "Play";
 			let code = `let cx = new AudioContext();${script.textContent}`;
-			let details = document.createElement("details");
+			let details = document.createElement("div"); // can be <details>
+			details.setAttribute("open", "");
 			let highlighted = hljs.highlightAuto(code, ["js"]).value;
-			details.innerHTML = `<summary class=audio-code>Code</summary><pre><code class="lang-js hljs javascript">${highlighted}</code></pre>`;
+			// <summary class=audio-code>Code</summary> for a summary element
+			details.innerHTML = `<pre><code class="lang-js hljs javascript">${highlighted}</code></pre>`;
 
 			script.parentNode.insertBefore(button, script);
 			script.parentNode.insertBefore(details, script);
