@@ -32,6 +32,8 @@
 <small> &mdash; Manish Goregaokar (@Manishearth)</small>
 
 
+<small>https://manishearth.github.io/gstreamer-presentation/</small>
+
 ♫
 
 (Introduce self and stuff if not introduced already)
@@ -567,15 +569,6 @@ Rust isn't very good with graph-based datastructures, however the excellent `pet
 Our graph abstraction deals with walking the graph for processing, and provides nicer internal APIs for connecting/disconnecting nodes.
 
 
-@@ is listing this code necessary? maybe explicitly call out that you shouldn't read it
-
-
-§§
-
-### Servo-media design: AudioParams
-
-@@ todo (maybe exclude this slide)
-
 
 §§
 
@@ -669,9 +662,20 @@ This library is designed to be drop-in in Servo; Servo has to do a very small am
 
 ♫ 
 
-(read slides)
+(~read slides)
 
-@@ write better-structured paragraph version of this for slide notes
+Currently, we have support for  ¶
+
+most of the nodes, including simple oscillators, manipulating gain, playing from buffers, analyzing via FFTs, manipulating channels, applying filters, and 3D panning. 
+
+¶ We support most of the parameters on these nodes.
+
+¶ We have support for audio listeners, which lets users specify the position and dynamics of the listener's head, which can then be used to 3D pan audio passed through PannerNode.
+
+¶ Everything servo-media supports is integrated in Servo proper.
+
+¶ We still have a lot of test failures. Many of these are due to unsupported features, but others are due to implementation bugs that we're still working on fixing.
+
 
 §
 
@@ -680,13 +684,41 @@ This library is designed to be drop-in in Servo; Servo has to do a very small am
  - Support all nodes except AudioWorklet <!-- .element: class="fragment" -->
  - Support all AudioParams <!-- .element: class="fragment" -->
  - Full graph processing algorithm <!-- .element: class="fragment" -->
+ - Performance work <!-- .element: class="fragment" -->
+ - Support for WebRTC
  - Pass all conformance tests <!-- .element: class="fragment" -->
 
 ♫ 
 
-(read slides)
+We hope to  ¶ support all nodes in the spec except perhaps AudioWorklet. AudioWorklet allows users to define custom processing engines in JavaScript, and is a relatively new API. We'll likely add _some_ way for Servo to hook in and implement this on its own, however we don't plan on including a Javascript engine in servo-media itself.
+
+¶ We also hope to support all of the AudioParams.
+
+¶ The graph processing algorithm we currently implement is simplistic (and somewhat inefficient). Proper support for WebAudio allows for certain kinds of cycles in the node graph. We hope to add support for this soon.
+
+¶ We've so far been focused on getting all the features in place, but haven't done much investigation of the performance, aside from simple tests. There's a lot of low hanging fruit for optimization as well.
+
+¶ This talk is mostly focused on WebAudio, but we're hoping to support WebRTC in Servo as well using GStreamer.
+
+¶ We should eventually pass all the conformance tests present in Web Platform Tests.
+
 
 §
+
+### You can help!
+
+ - http://github.com/servo/media
+ - https://github.com/servo/servo/blob/master/docs/HACKING_QUICKSTART.md
+
+
+♫ 
+
+We'd love for some help! Servo's relatively easy to get started with -- we have mentored issues and are always happy to help! We haven't yet opened mentored issues on servo-media just yet, but if you're looking for something to work on just ping me and I can help.
+
+
+§
+
+
 ### Acknowledgements
 
 Thank you:
@@ -699,7 +731,6 @@ Thank you:
 
 ♫ 
 
-@@ may be better to just list names idk (also thank someone for inviting? idk)
 
 §
 ### Thank you!
