@@ -321,6 +321,7 @@ For WebAudio, we take the aforementioned audio processing pipeline, and put it "
 
 
 
+
 §§
 
 
@@ -341,6 +342,74 @@ The `max_bytes` could potentially be increased to trade off some latency in the 
 
 §§
 
+
+
+### GStreamer in servo-media: AudioSink pipeline
+
+```rust
+let appsrc = gst::ElementFactory::make("appsrc", None)?;
+let appsrc = appsrc.downcast::<AppSrc>().unwrap();
+
+// ...
+let need_data = move |_, _| { /* ... */ }
+appsrc.set_callbacks(AppSrcCallbacks::new().need_data(need_data).build())
+// ...
+
+let resample = gst::ElementFactory::make("audioresample", None)?;
+let convert = gst::ElementFactory::make("audioconvert", None)?;
+let sink = gst::ElementFactory::make("autoaudiosink", None)?;
+self.pipeline
+    .add_many(&[&appsrc, &resample, &convert, &sink])?;
+gst::Element::link_many(&[&appsrc, &resample, &convert, &sink])?;
+```
+
+♫ 
+
+Here's a reduced example of how we set up the sink pipeline with gstreamer-rs. It's pretty easy to do from Rust -- we create the elements, add callbacks to the appsrc, and link them together.
+
+§§
+
+### GStreamer in servo-media: AppSrc pushing
+
+```rust
+// ...
+let mut buffer = gst::Buffer::with_size(buf_size).unwrap();
+{
+    let buffer = buffer.get_mut().unwrap();
+    let mut sample_offset = self.sample_offset.get();
+
+    // ...
+
+    buffer.set_pts(pts);
+    buffer.set_duration(next_pts - pts);
+
+    // sometimes nothing reaches the output
+    if chunk.len() == 0 {
+        chunk.blocks.push(Default::default());
+        chunk.blocks[0].repeat(channels as u8);
+    }
+
+    debug_assert!(chunk.len() == 1);
+    let mut data = chunk.blocks[0].interleave();
+    let data = data.as_mut_byte_slice().expect("casting failed");
+
+    buffer.copy_from_slice(0, data).expect("copying failed");
+
+    sample_offset += n_samples;
+    self.sample_offset.set(sample_offset);
+}
+
+self.appsrc
+    .push_buffer(buffer)
+    .into_result()
+```
+
+
+♫
+
+This is how we push to the buffer: We create a GstBuffer of the appropriate size, and copy over interleaved data into it. We're hoping to see planar audio support in Gstreamer soon, so that this step is unnecessary.
+
+§§
 
 
 ### GStreamer in servo-media: BaseSrc
@@ -388,7 +457,7 @@ We use the gstreamer-player crate for media playback. We hook into sink callback
 
 
 
-⏰=13
+⏰=13 + 2?
 
 
 §
