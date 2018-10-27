@@ -358,8 +358,8 @@ appsrc.set_callbacks(AppSrcCallbacks::new().need_data(need_data).build())
 let resample = gst::ElementFactory::make("audioresample", None)?;
 let convert = gst::ElementFactory::make("audioconvert", None)?;
 let sink = gst::ElementFactory::make("autoaudiosink", None)?;
-self.pipeline
-    .add_many(&[&appsrc, &resample, &convert, &sink])?;
+
+self.pipeline.add_many(&[&appsrc, &resample, &convert, &sink])?;
 gst::Element::link_many(&[&appsrc, &resample, &convert, &sink])?;
 ```
 
@@ -754,7 +754,7 @@ most of the nodes, including simple oscillators, manipulating gain, playing from
  - Support all AudioParams <!-- .element: class="fragment" -->
  - Full graph processing algorithm <!-- .element: class="fragment" -->
  - Performance work <!-- .element: class="fragment" -->
- - Support for WebRTC
+ - Support for WebRTC <!-- .element: class="fragment" -->
  - Pass all conformance tests <!-- .element: class="fragment" -->
 
 ♫ 
